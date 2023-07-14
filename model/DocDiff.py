@@ -65,8 +65,14 @@ class ResidualBlock(nn.Module):
     Each resolution is processed with two residual blocks.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, time_channels: int,
-                 dropout: float = 0.1, is_noise: bool = True):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        time_channels: int,
+        dropout: float = 0.1,
+        is_noise: bool = True,
+    ):
         """
         * `in_channels` is the number of input channels
         * `out_channels` is the number of input channels
@@ -78,12 +84,16 @@ class ResidualBlock(nn.Module):
         # Group normalization and the first convolution layer
         self.is_noise = is_noise
         self.act1 = Swish()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), padding=(1, 1))
+        self.conv1 = nn.Conv2d(
+            in_channels, out_channels, kernel_size=(3, 3), padding=(1, 1)
+        )
 
         # Group normalization and the second convolution layer
 
         self.act2 = Swish()
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=(3, 3), padding=(1, 1))
+        self.conv2 = nn.Conv2d(
+            out_channels, out_channels, kernel_size=(3, 3), padding=(1, 1)
+        )
 
         # If the number of input channels is not equal to the number of output channels we have to
         # project the shortcut connection
@@ -122,9 +132,17 @@ class DownBlock(nn.Module):
     This combines `ResidualBlock` and `AttentionBlock`. These are used in the first half of U-Net at each resolution.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, time_channels: int, is_noise: bool = True):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        time_channels: int,
+        is_noise: bool = True,
+    ):
         super().__init__()
-        self.res = ResidualBlock(in_channels, out_channels, time_channels, is_noise=is_noise)
+        self.res = ResidualBlock(
+            in_channels, out_channels, time_channels, is_noise=is_noise
+        )
 
     def forward(self, x: torch.Tensor, t: torch.Tensor):
         x = self.res(x, t)
@@ -137,11 +155,19 @@ class UpBlock(nn.Module):
     This combines `ResidualBlock` and `AttentionBlock`. These are used in the second half of U-Net at each resolution.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, time_channels: int, is_noise: bool = True):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        time_channels: int,
+        is_noise: bool = True,
+    ):
         super().__init__()
         # The input has `in_channels + out_channels` because we concatenate the output of the same resolution
         # from the first half of the U-Net
-        self.res = ResidualBlock(in_channels + out_channels, out_channels, time_channels, is_noise=is_noise)
+        self.res = ResidualBlock(
+            in_channels + out_channels, out_channels, time_channels, is_noise=is_noise
+        )
 
     def forward(self, x: torch.Tensor, t: torch.Tensor):
         x = self.res(x, t)
@@ -157,12 +183,24 @@ class MiddleBlock(nn.Module):
 
     def __init__(self, n_channels: int, time_channels: int, is_noise: bool = True):
         super().__init__()
-        self.res1 = ResidualBlock(n_channels, n_channels, time_channels, is_noise=is_noise)
-        self.dia1 = nn.Conv2d(n_channels, n_channels, 3, 1, dilation=2, padding=get_pad(16, 3, 1, 2))
-        self.dia2 = nn.Conv2d(n_channels, n_channels, 3, 1, dilation=4, padding=get_pad(16, 3, 1, 4))
-        self.dia3 = nn.Conv2d(n_channels, n_channels, 3, 1, dilation=8, padding=get_pad(16, 3, 1, 8))
-        self.dia4 = nn.Conv2d(n_channels, n_channels, 3, 1, dilation=16, padding=get_pad(16, 3, 1, 16))
-        self.res2 = ResidualBlock(n_channels, n_channels, time_channels, is_noise=is_noise)
+        self.res1 = ResidualBlock(
+            n_channels, n_channels, time_channels, is_noise=is_noise
+        )
+        self.dia1 = nn.Conv2d(
+            n_channels, n_channels, 3, 1, dilation=2, padding=get_pad(16, 3, 1, 2)
+        )
+        self.dia2 = nn.Conv2d(
+            n_channels, n_channels, 3, 1, dilation=4, padding=get_pad(16, 3, 1, 4)
+        )
+        self.dia3 = nn.Conv2d(
+            n_channels, n_channels, 3, 1, dilation=8, padding=get_pad(16, 3, 1, 8)
+        )
+        self.dia4 = nn.Conv2d(
+            n_channels, n_channels, 3, 1, dilation=16, padding=get_pad(16, 3, 1, 16)
+        )
+        self.res2 = ResidualBlock(
+            n_channels, n_channels, time_channels, is_noise=is_noise
+        )
 
     def forward(self, x: torch.Tensor, t: torch.Tensor):
         x = self.res1(x, t)
@@ -211,9 +249,15 @@ class UNet(nn.Module):
     ## U-Net
     """
 
-    def __init__(self, input_channels: int = 2, output_channels: int = 1, n_channels: int = 32,
-                 ch_mults: Union[Tuple[int, ...], List[int]] = (1, 2, 2, 4),
-                 n_blocks: int = 2, is_noise: bool = True):
+    def __init__(
+        self,
+        input_channels: int = 2,
+        output_channels: int = 1,
+        n_channels: int = 32,
+        ch_mults: Union[Tuple[int, ...], List[int]] = (1, 2, 2, 4),
+        n_blocks: int = 2,
+        is_noise: bool = True,
+    ):
         """
         * `image_channels` is the number of channels in the image. $3$ for RGB.
         * `n_channels` is number of channels in the initial feature map that we transform the image into
@@ -227,7 +271,9 @@ class UNet(nn.Module):
         n_resolutions = len(ch_mults)
 
         # Project image into feature map
-        self.image_proj = nn.Conv2d(input_channels, n_channels, kernel_size=(3, 3), padding=(1, 1))
+        self.image_proj = nn.Conv2d(
+            input_channels, n_channels, kernel_size=(3, 3), padding=(1, 1)
+        )
 
         # Time embedding layer. Time embedding has `n_channels * 4` channels
         self.is_noise = is_noise
@@ -244,7 +290,11 @@ class UNet(nn.Module):
             out_channels = n_channels * ch_mults[i]
             # Add `n_blocks`
             for _ in range(n_blocks):
-                down.append(DownBlock(in_channels, out_channels, n_channels * 4, is_noise=is_noise))
+                down.append(
+                    DownBlock(
+                        in_channels, out_channels, n_channels * 4, is_noise=is_noise
+                    )
+                )
                 in_channels = out_channels
             # Down sample at all resolutions except the last
             if i < n_resolutions - 1:
@@ -265,10 +315,16 @@ class UNet(nn.Module):
             # `n_blocks` at the same resolution
             out_channels = n_channels * ch_mults[i]
             for _ in range(n_blocks):
-                up.append(UpBlock(in_channels, out_channels, n_channels * 4, is_noise=is_noise))
+                up.append(
+                    UpBlock(
+                        in_channels, out_channels, n_channels * 4, is_noise=is_noise
+                    )
+                )
             # Final block to reduce the number of channels
-            in_channels = n_channels * (ch_mults[i-1] if i >= 1 else 1)
-            up.append(UpBlock(in_channels, out_channels, n_channels * 4, is_noise=is_noise))
+            in_channels = n_channels * (ch_mults[i - 1] if i >= 1 else 1)
+            up.append(
+                UpBlock(in_channels, out_channels, n_channels * 4, is_noise=is_noise)
+            )
             in_channels = out_channels
             # Up sample at all resolutions except last
             if i > 0:
@@ -278,9 +334,11 @@ class UNet(nn.Module):
         self.up = nn.ModuleList(up)
 
         self.act = Swish()
-        self.final = nn.Conv2d(in_channels, output_channels, kernel_size=(3, 3), padding=(1, 1))
+        self.final = nn.Conv2d(
+            in_channels, output_channels, kernel_size=(3, 3), padding=(1, 1)
+        )
 
-    def forward(self, x: torch.Tensor, t: torch.Tensor=torch.tensor([0]).cuda()):
+    def forward(self, x: torch.Tensor, t: torch.Tensor = torch.tensor([0]).cuda()):
         """
         * `x` has shape `[batch_size, in_channels, height, width]`
         * `t` has shape `[batch_size]`
@@ -319,14 +377,36 @@ class UNet(nn.Module):
         # Final normalization and convolution
         return self.final(self.act(x))
 
+
 9
+
+
 class DocDiff(nn.Module):
-    def __init__(self, input_channels: int = 2, output_channels: int = 1, n_channels: int = 32,
-                 ch_mults: Union[Tuple[int, ...], List[int]] = (1, 2, 2, 4),
-                 n_blocks: int = 1):
+    def __init__(
+        self,
+        input_channels: int = 2,
+        output_channels: int = 1,
+        n_channels: int = 32,
+        ch_mults: Union[Tuple[int, ...], List[int]] = (1, 2, 2, 4),
+        n_blocks: int = 1,
+    ):
         super(DocDiff, self).__init__()
-        self.denoiser = UNet(input_channels, output_channels, n_channels, ch_mults, n_blocks, is_noise=True)
-        self.init_predictor = UNet(input_channels//2, output_channels, n_channels, ch_mults, n_blocks, is_noise=False)
+        self.denoiser = UNet(
+            input_channels,
+            output_channels,
+            n_channels,
+            ch_mults,
+            n_blocks,
+            is_noise=True,
+        )
+        self.init_predictor = UNet(
+            input_channels // 2,
+            output_channels,
+            n_channels,
+            ch_mults,
+            n_blocks,
+            is_noise=False,
+        )
         # self.init_predictor = UNet(input_channels, output_channels, 2 * n_channels, ch_mults, n_blocks)
 
     def forward(self, x, condition, t, diffusion):
@@ -337,13 +417,15 @@ class DocDiff(nn.Module):
         return x_, x__, noisy_image, noise_ref
 
 
-class EMA():
+class EMA:
     def __init__(self, beta):
         super().__init__()
         self.beta = beta
 
     def update_model_average(self, ma_model, current_model):
-        for current_params, ma_params in zip(current_model.parameters(), ma_model.parameters()):
+        for current_params, ma_params in zip(
+            current_model.parameters(), ma_model.parameters()
+        ):
             old_weight, up_weight = ma_params.data, current_params.data
             ma_params.data = self.update_average(old_weight, up_weight)
 
@@ -353,29 +435,37 @@ class EMA():
         return old * self.beta + (1 - self.beta) * new
 
 
-def get_pad(in_,  ksize, stride, atrous=1):
-    out_ = np.ceil(float(in_)/stride)
-    return int(((out_ - 1) * stride + atrous*(ksize-1) + 1 - in_)/2)
+def get_pad(in_, ksize, stride, atrous=1):
+    out_ = np.ceil(float(in_) / stride)
+    return int(((out_ - 1) * stride + atrous * (ksize - 1) + 1 - in_) / 2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from src.config import load_config
     import argparse
     from schedule.diffusionSample import GaussianDiffusion
     from schedule.schedule import Schedule
     import torchsummary
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='../conf.yml', help='path to the config.yaml file')
+    parser.add_argument(
+        "--config", type=str, default="../conf.yml", help="path to the config.yaml file"
+    )
     args = parser.parse_args()
     config = load_config(args.config)
-    print('Config loaded')
-    model = DocDiff(input_channels=config.CHANNEL_X + config.CHANNEL_Y,
-            output_channels=config.CHANNEL_Y,
-            n_channels=config.MODEL_CHANNELS,
-            ch_mults=config.CHANNEL_MULT,
-            n_blocks=config.NUM_RESBLOCKS)
+    print("Config loaded")
+    model = DocDiff(
+        input_channels=config.CHANNEL_X + config.CHANNEL_Y,
+        output_channels=config.CHANNEL_Y,
+        n_channels=config.MODEL_CHANNELS,
+        ch_mults=config.CHANNEL_MULT,
+        n_blocks=config.NUM_RESBLOCKS,
+    )
     schedule = Schedule(config.SCHEDULE, config.TIMESTEPS)
     diffusion = GaussianDiffusion(model, config.TIMESTEPS, schedule)
     model.eval()
-    print(torchsummary.summary(model.init_predictor.cuda(), [(3, 128, 128)], batch_size=32))
-
+    print(
+        torchsummary.summary(
+            model.init_predictor.cuda(), [(3, 128, 128)], batch_size=32
+        )
+    )

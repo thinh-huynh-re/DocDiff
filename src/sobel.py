@@ -5,7 +5,14 @@ import torch
 class Sobel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1, bias=False)
+        self.filter = nn.Conv2d(
+            in_channels=1,
+            out_channels=2,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+        )
 
         Gx = torch.tensor([[1.0, 0.0, -1.0], [2.0, 0.0, -2.0], [1.0, 0.0, -1.0]])
         Gy = torch.tensor([[1.0, 2.0, 1.0], [0.0, 0.0, 0.0], [-1.0, -2.0, -1.0]])
@@ -26,7 +33,15 @@ class Sobel(nn.Module):
 class Laplacian(nn.Module):
     def __init__(self):
         super().__init__()
-        self.filter = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, stride=1, padding=1, bias=False, groups=3)
+        self.filter = nn.Conv2d(
+            in_channels=3,
+            out_channels=3,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+            groups=3,
+        )
         G = torch.tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]).float()
         G = G.unsqueeze(0).unsqueeze(0)
         G = torch.cat([G, G, G], 0)
@@ -35,6 +50,7 @@ class Laplacian(nn.Module):
     def forward(self, img):
         x = self.filter(img)
         return x
+
 
 if __name__ == "__main__":
     laplacian = Laplacian()

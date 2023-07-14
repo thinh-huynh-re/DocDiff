@@ -28,7 +28,7 @@ class Schedule:
         scale = 1000 / timesteps
         beta_start = 1e-6 * scale
         beta_end = 0.02 * scale
-        return torch.linspace(beta_start ** 0.5, beta_end ** 0.5, timesteps) ** 2
+        return torch.linspace(beta_start**0.5, beta_end**0.5, timesteps) ** 2
 
     def sigmoid_beta_schedule(self):
         timesteps = self.timesteps
@@ -41,7 +41,7 @@ class Schedule:
     def get_betas(self):
         if self.schedule == "linear":
             return self.linear_beta_schedule()
-        elif self.schedule == 'cosine':
+        elif self.schedule == "cosine":
             return self.cosine_beta_schedule()
         else:
             raise NotImplementedError
