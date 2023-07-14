@@ -1,9 +1,8 @@
 import math
-from typing import Optional, Tuple, Union, List
+from typing import Tuple, Union, List
 import numpy as np
 import torch
 from torch import nn
-from src.sobel import Sobel, Laplacian
 
 
 class Swish(nn.Module):
