@@ -8,58 +8,60 @@
 
 [简体中文](README.md) | [English](README.EN.md) | [Paper](https://arxiv.org/abs/2305.03892v1)
 # DocDiff
-这里是论文[DocDiff: Document Enhancement via Residual Diffusion Models](https://arxiv.org/abs/2305.03892v1)的官方复现仓库。DocDiff是一个文档增强模型（详见[论文](https://arxiv.org/abs/2305.03892v1)），可以用于文档去模糊、文档去噪、文档二值化、文档去水印和印章等任务。DocDiff是一个轻量级的基于残差预测的扩散模型，在128*128分辨率上以Batchsize=64训练只需要12GB显存。
-不仅文档增强，DocDiff还可以应用在其他img2img任务上，比如自然场景去模糊[<sup>1</sup>](#refer-anchor-1)，去噪，去雨，超分[<sup>2</sup>](#refer-anchor-2)，图像修复等low-level任务以及语义分割[<sup>4</sup>](#refer-anchor-4)等high-level任务。
+This is the official repository for the paper [DocDiff: Document Enhancement via Residual Diffusion Models](https://arxiv.org/abs/2305.03892v1). DocDiff is a document enhancement model (please refer to the [paper](https://arxiv.org/abs/2305.03892v1)) that can be used for tasks such as document deblurring, denoising, binarization, watermark and stamp removal, etc. DocDiff is a lightweight residual prediction-based diffusion model, that can be trained on a batch size of 64 with only 12GB of VRAM at a resolution of 128*128.
+
+Not only for document enhancement, DocDiff can also be used for other img2img tasks, such as natural scene deblurring[<sup>1</sup>](#refer-anchor-1), denoising, rain removal, super-resolution[<sup>2</sup>](#refer-anchor-2), image inpainting, as well as high-level tasks such as semantic segmentation[<sup>4</sup>](#refer-anchor-4).
 </div>
 
 # News
 
-- 2023.05.08: 代码的初始版本已经上传。请查看To-do lists来获取未来的更新。
-- 2023.06.13: 为了方便复现，已上传推理笔记本`demo/inference.ipynb`和预训练模型`checksave/`。
+- 2023.05.08: The initial version of the code is uploaded. Please check the to-do list for future updates.
+- 2023.06.13: The inference notebook `demo/inference.ipynb` is uploaded for convenient reproduction and pretrained models `checksave/` are uploaded.
 
-# 使用指南
+# Guide
 
-无论是训练还是推理，你只需要修改conf.yml中的配置参数，然后运行main.py即可。MODE=1为训练，MODE=0为推理。conf.yml中的参数都有详细注释，你可以根据注释修改参数。文档去模糊预训练权重在`checksave/`。
-**请注意**conf.yml中的默认参数在文档场景表现最好。如果你想应用DocDiff在自然场景，请先看一下[注意事项!!!](#注意事项!!!)。如果仍有问题，欢迎提issue。
+Whether it's for training or inference, you just need to modify the configuration parameters in `conf.yml` and run `main.py`. MODE=1 is for training, MODE=0 is for inference. The parameters in `conf.yml` have detailed annotations, so you can modify them as needed. Pre-trained weights for document deblurring Coarse Predictor and Denoiser can be found in `checksave/`, respectively.
 
-- 由于要下采样3次，所以输入图像的分辨率必须是8的倍数。如果你的图像不是8的倍数，可以使用padding或者裁剪的方式将图像调整为8的倍数。请不要直接Resize，因为这样会导致图像失真。尤其在去模糊任务中，图像失真会导致模糊程度增加，效果会变得很差。例如，DocDiff使用的文档去模糊数据集[<sup>5</sup>](#refer-anchor-5)分辨率为300\*300，需要先padding到304\*304，再送入推理。
+Please note that the default parameters in `conf.yml` work best for document scenarios. If you want to apply DocDiff to natural scenes, please first read [Notes!](#notes!) carefully. If you still have issues, welcome to submit an issue.
 
-## 环境配置
+- Because downsampling is applied three times, the resolution of the input image must be a multiple of 8. If your image is not a multiple of 8, you can adjust the image to be a multiple of 8 using padding or cropping. Please do not directly resize, as it may cause image distortion. In particular, in the deblurring task, image distortion will increase the blur and result in poor performance. For example, the document deblurring dataset [<sup>5</sup>](#refer-anchor-5) used by DocDiff has a resolution of 300\*300, which needs to be padded to 304\*304 before inference.
+
+## Environment
 
 - python >= 3.7
 - pytorch >= 1.7.0
 - torchvision >= 0.8.0
 
-
 <div align="center">
 
-# 注意事项!!!
+# Notes!
+
 </div>
 
-- DocDiff的默认配置参数，训练和推理策略是为**文档图像设计**的，如果要用于自然场景，想获得更好的效果，需要**调整参数**，比如扩大模型，添加Self-Attention等（因为文档图像的模式相对固定，但是自然场景的模式比较多样需要更多的参数）并修改**训练和推理策略**。
-- **训练策略**：如论文所述，在文档场景中，因为不追求生成多样性，并且希望尽可能缩减推理时间。所以我们将扩散步长T设为100，并预测 $x_0$ 而不是预测 $\epsilon$。在使用基于通道叠加的引入条件（Coarse Predictor的输出）的方案的前提下，这种策略可以使得在逆向扩散的前几步就可以恢复出较好的 $x_0$ 。在自然场景中，为了更好地重建纹理并追求生成多样性，扩散步长T尽可能大，并要预测 $\epsilon$ 。你只需要修改**conf.yml**中的**PRE_ORI="False"**，即可使用预测 $\epsilon$ 的方案; 修改**conf.yml**中的**TIMESTEPS=1000**，即可使用更大的扩散步长。
-- **推理策略**：在文档场景中生成的图像不想带有随机性（短步随机采样会导致文本边缘扭曲），DocDiff执行DDIM[<sup>3</sup>](#refer-anchor-3)中的确定采样。在自然场景中，随机采样是生成多样性的关键，修改**conf.yml**中的**PRE_ORI="False"**，即可使用随机采样。也就是说，预测 $\epsilon$ 的方案与随机采样是绑定的，而预测 $x_0$ 的方案与确定采样是绑定的。如果你想预测 $x_0$ 并随机采样或者 预测 $\epsilon$ 并确定采样，你需要自己修改代码。DocDiff中确定采样是DDIM中的确定采样，随机采样是DDPM中的随机采样，你可以自己修改代码实现其他采样策略。
-- **总结**：应用于不需要生成多样性的任务，比如语义分割，文档增强，使用预测 $x_0$ 的方案，扩散步长T设为100就ok，效果已经很好了；应用于需要生成多样性的任务，比如自然场景去模糊，超分，图像修复等，使用预测 $\epsilon$ 的方案，扩散步长T设为1000。
+- The default configuration parameters of DocDiff are designed for **document images**, and if you want to achieve better results when using it for **natural scenes**, you need to adjust the parameters. For example, you can scale up the model, add **self-attention**, etc. (because document images have relatively fixed patterns, but natural scenes have more diverse patterns and require more parameters). Additionally, you may need to modify the **training and inference strategies**.
+- **Training strategy**: As described in the paper, in document scenarios, we do not pursue diverse results and we need to minimize the inference time as much as possible. Therefore, we set the diffusion step T to 100, and predict $x_0$ instead of predicting $\epsilon$. Based on the premise of using a channel-wise concatenation conditioning scheme, this strategy can recover a fine $x_0$ in the early steps of reverse diffusion. In natural scenes, in order to better reconstruct textures and pursue diverse results, the diffusion step T should be set as large as possible, and $\epsilon$ should be predicted. You just need to modify **PRE_ORI="False"** in `conf.yml` to use the scheme of predicting $\epsilon$, and modify **TIMESTEPS=1000** to use a larger diffusion step.
+- **Inference strategy**: The images generated in document scenarios should not have randomness. (short-step stochastic sampling may cause text edges to be distorted), so DocDiff performs deterministic sampling as described in DDIM[<sup>3</sup>](#refer-anchor-3). In natural scenes, stochastic sampling is essential for diverse results, so you can use stochastic sampling by modifying **PRE_ORI="False"** in `conf.yml`. In other words, the scheme of predicting $\epsilon$ is bound to stochastic sampling, while the scheme of predicting $x_0$ is bound to deterministic sampling. If you want to predict $x_0$ and use stochastic sampling, or predict $\epsilon$ and use deterministic sampling, you need to modify the code yourself. In DocDiff, deterministic sampling is performed using the method in DDIM, while stochastic sampling is performed using the method in DDPM. You can modify the code to implement other sampling strategies yourself.
+- **Summary**: For tasks that do not require diverse results, such as semantic segmentation, document enhancement, predicting $x_0$ with a diffusion step of 100 is enough, and the performance is already good. For tasks that require diverse results, such as deblurring for natural scenes, super-resolution, image restoration, etc., predicting $\epsilon$ with a diffusion step of 1000 is recommended.
 
-# To-do lists
+# To-do Lists
 
-- [x] 添加训练代码
-- [x] 添加推理代码
-- [x] 上传预训练模型
-- [x] 使用DPM_solver减少推理步长（实际用起来，效果一般）
-- [x] 上传Inference notebook，方便复现
-- [ ] 合成包含更多噪声的文档数据集(比如椒盐噪声，压缩产生的噪声)
-- [ ] 多GPU训练
-- [ ] DDIM的跳步采样
-- [ ] 使用深度可分离卷积压缩模型
-- [ ] 在自然场景上训练模型并提供结果和预训练模型
+- [x] Add training code
+- [x] Add inference code
+- [x] Upload pre-trained model
+- [x] Use DPM_solver to reduce inference step size (although the effect is not significant in practice)
+- [x] Uploaded the inference notebook for convenient reproduction
+- [ ] Synthesize document datasets with more noise, such as salt-and-pepper noise and noise generated from compression.
+- [ ] Train on multiple GPUs
+- [ ] Jump-step sampling for DDIM
+- [ ] Use depth separable convolution to compress the model
+- [ ] Train the model on natural scenes and provide results and pre-trained models
 
-# 感谢
+# Acknowledgement
 
-- 如果你觉得DocDiff对你有帮助，请给个star，谢谢！🤞😘
-- 如果你有任何问题，欢迎提issue，我会尽快回复。
-- 如果你想交流，欢迎给我发邮件**viceyzy@foxmail.com**，备注：**DocDiff**。
-- 如果你愿意将DocDiff作为你的项目的baseline，欢迎引用我们的论文。
+- If you find DocDiff helpful, please give us a star. Thank you! 🤞😘
+- If you have any questions, please don't hesitate to open an issue. We will reply as soon as possible.
+- If you want to communicate with us, please send an email to **viceyzy@foxmail.com** with the subject "**DocDiff**".
+- If you want to use DocDiff as the baseline for your project, please cite our paper.
 ```
 @articlec{yang2023docdiff,
       title={DocDiff: Document Enhancement via Residual Diffusion Models}, 
