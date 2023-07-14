@@ -87,13 +87,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_format = "{:,}".format
 
 
-def preprocessing(img: np.ndarray) -> Tensor:
+def preprocessing(img: Image.Image) -> Tensor:
     img = RandomCrop(304, pad_if_needed=True, padding_mode="reflect")(img)
     img = ToTensor()(img)  # convert to tensor
     return img.unsqueeze(0)  # add batch dimension (1, 3, 300, 300)
 
 
-def postprocessing(img: Tensor) -> Image:
+def postprocessing(img: Tensor) -> Image.Image:
     return ToPILImage()(img)
 
 
